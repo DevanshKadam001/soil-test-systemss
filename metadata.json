@@ -1,0 +1,6 @@
+{
+  "name": "Soil Test System",
+  "description": "An AI-powered web application that analyzes soil photos to identify soil types, physical characteristics, and suggest suitable crops with cultivation advice.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
