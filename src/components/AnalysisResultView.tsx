@@ -201,176 +201,299 @@ export default function AnalysisResultView({ analysis, imageUrl, isPreset }: Ana
   };
 
   const handleDownloadPDF = async () => {
-    if (!reportRef.current) return;
     setIsGeneratingPDF(true);
 
-    try {
-      const element = reportRef.current;
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        windowWidth: 1200,
-        onclone: (clonedDoc) => {
-          // 1. Copy computed styles from original elements onto cloned elements as explicit inline styles
-          const originalReport = reportRef.current;
-          const clonedReport = clonedDoc.getElementById("printable-soil-report");
-          if (originalReport && clonedReport) {
-            const origEls = [originalReport, ...Array.from(originalReport.querySelectorAll<HTMLElement>("*"))];
-            const clonedEls = [clonedReport, ...Array.from(clonedReport.querySelectorAll<HTMLElement>("*"))];
-
-            for (let i = 0; i < origEls.length && i < clonedEls.length; i++) {
-              const orig = origEls[i];
-              const clone = clonedEls[i];
-              if (orig && clone) {
-                try {
-                  const cs = window.getComputedStyle(orig);
-                  clone.style.color = cs.color;
-                  clone.style.backgroundColor = cs.backgroundColor;
-                  clone.style.borderColor = cs.borderColor;
-                  clone.style.borderTopColor = cs.borderTopColor;
-                  clone.style.borderRightColor = cs.borderRightColor;
-                  clone.style.borderBottomColor = cs.borderBottomColor;
-                  clone.style.borderLeftColor = cs.borderLeftColor;
-                  if (orig.tagName === "IMG") {
-                    (clone as HTMLImageElement).crossOrigin = "anonymous";
-                  }
-                } catch {
-                  // Ignore style copy errors on special nodes
-                }
-              }
-            }
-          }
-
-          // 2. Helper to thoroughly remove oklch/oklab/color-mix functions from CSS text
-          const sanitizeCssText = (css: string): string => {
-            if (!css) return "";
-            let result = css;
-
-            // Remove color-mix calls
-            let mixIdx = result.indexOf("color-mix(");
-            while (mixIdx !== -1) {
-              let depth = 0;
-              let endIdx = -1;
-              for (let i = mixIdx + 9; i < result.length; i++) {
-                if (result[i] === "(") depth++;
-                else if (result[i] === ")") {
-                  if (depth === 0) {
-                    endIdx = i;
-                    break;
-                  }
-                  depth--;
-                }
-              }
-              if (endIdx !== -1) {
-                result = result.substring(0, mixIdx) + "rgba(18, 51, 31, 0.8)" + result.substring(endIdx + 1);
-              } else {
-                break;
-              }
-              mixIdx = result.indexOf("color-mix(");
-            }
-
-            // Remove oklch calls
-            let oklchIdx = result.indexOf("oklch(");
-            while (oklchIdx !== -1) {
-              let depth = 0;
-              let endIdx = -1;
-              for (let i = oklchIdx + 5; i < result.length; i++) {
-                if (result[i] === "(") depth++;
-                else if (result[i] === ")") {
-                  if (depth === 0) {
-                    endIdx = i;
-                    break;
-                  }
-                  depth--;
-                }
-              }
-              if (endIdx !== -1) {
-                result = result.substring(0, oklchIdx) + "rgba(18, 51, 31, 0.9)" + result.substring(endIdx + 1);
-              } else {
-                break;
-              }
-              oklchIdx = result.indexOf("oklch(");
-            }
-
-            // Remove oklab calls
-            let oklabIdx = result.indexOf("oklab(");
-            while (oklabIdx !== -1) {
-              let depth = 0;
-              let endIdx = -1;
-              for (let i = oklabIdx + 5; i < result.length; i++) {
-                if (result[i] === "(") depth++;
-                else if (result[i] === ")") {
-                  if (depth === 0) {
-                    endIdx = i;
-                    break;
-                  }
-                  depth--;
-                }
-              }
-              if (endIdx !== -1) {
-                result = result.substring(0, oklabIdx) + "rgba(18, 51, 31, 0.9)" + result.substring(endIdx + 1);
-              } else {
-                break;
-              }
-              oklabIdx = result.indexOf("oklab(");
-            }
-
-            return result.replace(/oklab/gi, "srgb").replace(/oklch/gi, "srgb");
-          };
-
-          // 3. Sanitize all <style> tags in cloned document
-          const styleTags = clonedDoc.querySelectorAll("style");
-          styleTags.forEach((style) => {
-            if (style.textContent) {
-              style.textContent = sanitizeCssText(style.textContent);
-            }
-          });
-
-          // 4. Sanitize any style attributes on elements in cloned document
-          const allElements = clonedDoc.querySelectorAll<HTMLElement>("*");
-          allElements.forEach((el) => {
-            const attrStyle = el.getAttribute("style");
-            if (attrStyle) {
-              el.setAttribute("style", sanitizeCssText(attrStyle));
-            }
-          });
-        }
-      });
-
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const generateDirectPDF = () => {
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "a4",
       });
 
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pageWidth = pdf.internal.pageSize.getWidth(); // 210mm
+      const pageHeight = pdf.internal.pageSize.getHeight(); // 297mm
+      const margin = 14;
+      const contentWidth = pageWidth - margin * 2; // 182mm
+      let y = 14;
 
-      let heightLeft = imgHeight;
-      let position = 0;
+      const checkPageOverflow = (neededHeight: number) => {
+        if (y + neededHeight > pageHeight - margin) {
+          pdf.addPage();
+          y = margin + 6;
+          // Re-draw top accent line on secondary pages
+          pdf.setFillColor(18, 54, 32); // #123620
+          pdf.rect(0, 0, pageWidth, 4, "F");
+          return true;
+        }
+        return false;
+      };
 
-      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
+      // 1. OFFICIAL BANNER HEADER
+      pdf.setFillColor(18, 54, 32); // #123620 Dark Green
+      pdf.rect(margin, y, contentWidth, 22, "F");
 
-      while (heightLeft > 5) {
-        position -= pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(13);
+      pdf.text("ANALYZED SOIL REPORT", margin + 6, y + 9);
+
+      pdf.setFontSize(7.5);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(200, 230, 210);
+      pdf.text("Center for Precision Agriculture, Soil Spectroscopy & Crop Optimization", margin + 6, y + 16);
+
+      // Ref & Date Top Right
+      pdf.setFontSize(8);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(`REF: ${reportRefId}`, margin + contentWidth - 6, y + 9, { align: "right" });
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(200, 230, 210);
+      pdf.text(`Date: ${currentDate}`, margin + contentWidth - 6, y + 16, { align: "right" });
+
+      y += 26;
+
+      // 2. SOIL PROFILE CARD
+      pdf.setFillColor(240, 247, 242);
+      pdf.setDrawColor(176, 214, 190);
+      pdf.roundedRect(margin, y, contentWidth, 20, 2, 2, "FD");
+
+      pdf.setTextColor(18, 54, 32);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      pdf.text(`SOIL CLASSIFICATION: ${analysis.soilType.toUpperCase()}`, margin + 6, y + 8);
+
+      pdf.setFontSize(8);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(60, 60, 60);
+      pdf.text(`Diagnostic Confidence: ${analysis.confidenceScore}%  |  pH Index: ${analysis.phRange}  |  Texture: ${analysis.texture}`, margin + 6, y + 15);
+
+      y += 24;
+
+      // 3. EXECUTIVE AGRONOMIC SUMMARY
+      checkPageOverflow(25);
+      pdf.setFillColor(18, 54, 32);
+      pdf.rect(margin, y, 3, 9, "F");
+      pdf.setTextColor(18, 54, 32);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9.5);
+      pdf.text("1. EXECUTIVE AGRONOMIC SUMMARY", margin + 6, y + 6.5);
+      y += 11;
+
+      const summaryContent = analysis.simpleExplanation || analysis.keyCharacteristics.join(". ");
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.setTextColor(40, 40, 40);
+      const splitSummary = pdf.splitTextToSize(summaryContent, contentWidth - 4);
+      
+      checkPageOverflow(splitSummary.length * 3.8 + 4);
+      pdf.text(splitSummary, margin + 2, y);
+      y += splitSummary.length * 3.8 + 6;
+
+      // 4. QUANTITATIVE METRICS GRID
+      checkPageOverflow(32);
+      pdf.setFillColor(18, 54, 32);
+      pdf.rect(margin, y, 3, 9, "F");
+      pdf.setTextColor(18, 54, 32);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9.5);
+      pdf.text("2. QUANTITATIVE SOIL METRICS & PHYSICAL PROPERTIES", margin + 6, y + 6.5);
+      y += 11;
+
+      const boxWidth = (contentWidth - 9) / 4;
+      const metrics = [
+        { label: "pH Balance", val: analysis.phRange, sub: "Reaction Index" },
+        { label: "Moisture", val: analysis.moistureRetention.split('.')[0], sub: "Water Holding" },
+        { label: "Soil Texture", val: analysis.texture, sub: "Composition" },
+        { label: "Organic Humus", val: analysis.color, sub: "Humus Indicator" },
+      ];
+
+      metrics.forEach((m, idx) => {
+        const bx = margin + idx * (boxWidth + 3);
+        pdf.setFillColor(248, 250, 248);
+        pdf.setDrawColor(215, 225, 218);
+        pdf.roundedRect(bx, y, boxWidth, 17, 1.5, 1.5, "FD");
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(7);
+        pdf.setTextColor(100, 115, 105);
+        pdf.text(m.label.toUpperCase(), bx + 3, y + 5);
+
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(18, 54, 32);
+        pdf.text(m.val, bx + 3, y + 10.5);
+
+        pdf.setFontSize(6);
+        pdf.setTextColor(120, 130, 125);
+        pdf.text(m.sub, bx + 3, y + 14.5);
+      });
+      y += 21;
+
+      // 5. FERTILIZER & CONDITIONING RECOMMENDATIONS
+      if (analysis.fertilizerRecommendations && analysis.fertilizerRecommendations.length > 0) {
+        checkPageOverflow(35);
+        pdf.setFillColor(18, 54, 32);
+        pdf.rect(margin, y, 3, 9, "F");
+        pdf.setTextColor(18, 54, 32);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(9.5);
+        pdf.text("3. FERTILIZER & NUTRIENT CONDITIONING RECOMMENDATIONS", margin + 6, y + 6.5);
+        y += 11;
+
+        analysis.fertilizerRecommendations.forEach((rec) => {
+          const recText = `${rec.nutrient} [${rec.status.toUpperCase()}]: ${rec.recommendation} | Organic: ${rec.organicSources.join(", ")} | Chemical: ${rec.chemicalSources.join(", ")}`;
+          const splitRec = pdf.splitTextToSize(recText, contentWidth - 8);
+          const boxH = Math.max(10, splitRec.length * 3.6 + 4);
+
+          checkPageOverflow(boxH + 3);
+
+          pdf.setFillColor(252, 254, 252);
+          pdf.setDrawColor(200, 225, 205);
+          pdf.roundedRect(margin, y, contentWidth, boxH, 1, 1, "FD");
+
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(7.5);
+          pdf.setTextColor(30, 30, 30);
+          pdf.text(splitRec, margin + 4, y + 4);
+          y += boxH + 3;
+        });
+        y += 2;
       }
+
+      // 6. RECOMMENDED CROP COMPATIBILITY MATRIX
+      checkPageOverflow(35);
+      pdf.setFillColor(18, 54, 32);
+      pdf.rect(margin, y, 3, 9, "F");
+      pdf.setTextColor(18, 54, 32);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9.5);
+      pdf.text("4. RECOMMENDED CROP COMPATIBILITY MATRIX", margin + 6, y + 6.5);
+      y += 11;
+
+      analysis.suitableCrops.forEach((crop, idx) => {
+        const cropHeader = `${idx + 1}. ${crop.name.toUpperCase()} (${crop.type}) — Sowing: ${crop.sowingSeason} | Water: ${crop.waterRequirement}`;
+        const cropBody = `Rationale: ${crop.whySuitable}\nCare Directives: ${crop.careTips.join("; ")}`;
+        const splitBody = pdf.splitTextToSize(cropBody, contentWidth - 8);
+        const cardH = 7 + splitBody.length * 3.5;
+
+        checkPageOverflow(cardH + 3);
+
+        pdf.setFillColor(245, 250, 246);
+        pdf.setDrawColor(190, 220, 200);
+        pdf.roundedRect(margin, y, contentWidth, cardH, 1.5, 1.5, "FD");
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8);
+        pdf.setTextColor(18, 54, 32);
+        pdf.text(cropHeader, margin + 4, y + 4.5);
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(7);
+        pdf.setTextColor(50, 50, 50);
+        pdf.text(splitBody, margin + 4, y + 8.5);
+
+        y += cardH + 3;
+      });
+
+      // 7. AGRONOMIC IMPROVEMENT TIPS
+      if (analysis.soilImprovementTips && analysis.soilImprovementTips.length > 0) {
+        checkPageOverflow(25);
+        pdf.setFillColor(18, 54, 32);
+        pdf.rect(margin, y, 3, 9, "F");
+        pdf.setTextColor(18, 54, 32);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(9.5);
+        pdf.text("5. AGRONOMIC IMPROVEMENT & MANAGEMENT TIPS", margin + 6, y + 6.5);
+        y += 11;
+
+        analysis.soilImprovementTips.forEach((tip) => {
+          const splitTip = pdf.splitTextToSize(`• ${tip}`, contentWidth - 6);
+          checkPageOverflow(splitTip.length * 3.5 + 2);
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(7.5);
+          pdf.setTextColor(40, 40, 40);
+          pdf.text(splitTip, margin + 3, y);
+          y += splitTip.length * 3.5 + 2;
+        });
+        y += 3;
+      }
+
+      // 8. OFFICIAL CERTIFICATION FOOTER
+      checkPageOverflow(20);
+      pdf.setFillColor(18, 54, 32);
+      pdf.rect(margin, y, contentWidth, 16, "F");
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(8);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text("VERIFIED DIAGNOSTIC CERTIFICATION — OFFICIAL AGRI-AI REPORT", margin + 6, y + 6);
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(6.5);
+      pdf.setTextColor(200, 230, 210);
+      pdf.text(`Issued by Analyzed Soil report System | Reference: ${reportRefId} | Date: ${currentDate}`, margin + 6, y + 11.5);
 
       const safeFileName = `Soil_Diagnostic_Report_${analysis.soilType.replace(/[^a-zA-Z0-9]/g, "_")}_${reportRefId}.pdf`;
       pdf.save(safeFileName);
+    };
+
+    try {
+      if (reportRef.current) {
+        const element = reportRef.current;
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+          windowWidth: 1200,
+          onclone: (clonedDoc) => {
+            const styleTags = clonedDoc.querySelectorAll("style");
+            styleTags.forEach((s) => {
+              if (s.textContent) {
+                s.textContent = s.textContent
+                  .replace(/oklch\([^)]+\)/gi, "rgba(18, 51, 31, 0.9)")
+                  .replace(/oklab\([^)]+\)/gi, "rgba(18, 51, 31, 0.9)")
+                  .replace(/color-mix\([^)]+\)/gi, "rgba(18, 51, 31, 0.8)");
+              }
+            });
+          }
+        });
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+        const pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "mm",
+          format: "a4",
+        });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 5) {
+          position -= pdfHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+          heightLeft -= pdfHeight;
+        }
+
+        const safeFileName = `Soil_Diagnostic_Report_${analysis.soilType.replace(/[^a-zA-Z0-9]/g, "_")}_${reportRefId}.pdf`;
+        pdf.save(safeFileName);
+      } else {
+        generateDirectPDF();
+      }
     } catch (err) {
-      console.error("PDF generation error, downloading text report instead:", err);
-      handleDownloadTextReport();
+      console.warn("DOM canvas capture failed, generating vector PDF document directly:", err);
+      generateDirectPDF();
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -386,10 +509,10 @@ export default function AnalysisResultView({ analysis, imageUrl, isPreset }: Ana
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto print:max-w-none print:w-full print:m-0">
+    <div className="space-y-6 w-full max-w-7xl mx-auto print:max-w-none print:w-full print:m-0">
       
       {/* Top Action Toolbar (Hidden in Print) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#123620] p-3 sm:p-4 rounded-2xl border border-[#235e39] print:hidden shadow-md text-white">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#123620] p-3.5 sm:p-4 rounded-2xl border border-[#235e39] print:hidden shadow-md text-white">
         <div className="flex items-center gap-2 text-xs font-semibold text-emerald-200 font-mono">
           <FileCheck className="w-4 h-4 text-emerald-400" />
           <span>REPORT REF: <strong className="text-white">{reportRefId}</strong></span>
@@ -465,7 +588,7 @@ export default function AnalysisResultView({ analysis, imageUrl, isPreset }: Ana
       <div 
         ref={reportRef} 
         id="printable-soil-report"
-        className="bg-white rounded-3xl border border-stone-300 shadow-md p-6 sm:p-10 text-stone-900 space-y-8 print:border-none print:shadow-none print:p-0"
+        className="bg-white rounded-3xl border border-stone-300 shadow-md p-5 sm:p-8 md:p-12 text-stone-900 space-y-8 print:border-none print:shadow-none print:p-0"
       >
         
         {/* OFFICIAL LETTERHEAD HEADER */}
@@ -477,14 +600,14 @@ export default function AnalysisResultView({ analysis, imageUrl, isPreset }: Ana
               </div>
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-lg sm:text-xl font-black tracking-tight text-stone-950 uppercase font-heading">
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-stone-950 uppercase font-heading">
                     Analyzed Soil report
                   </h1>
-                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 text-[9px] font-bold rounded uppercase tracking-wider font-mono border border-emerald-300">
+                  <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-900 text-[9px] sm:text-[10px] font-bold rounded uppercase tracking-wider font-mono border border-emerald-300">
                     OFFICIAL REPORT
                   </span>
                 </div>
-                <p className="text-xs text-stone-500 font-sans font-medium">
+                <p className="text-xs sm:text-sm text-stone-500 font-sans font-medium">
                   Center for Precision Agriculture, Soil Spectroscopy & Crop Optimization
                 </p>
               </div>
@@ -492,7 +615,7 @@ export default function AnalysisResultView({ analysis, imageUrl, isPreset }: Ana
 
             <div className="text-left sm:text-right space-y-1 border-t sm:border-t-0 pt-3 sm:pt-0 border-stone-200 font-mono text-xs">
               <div className="text-stone-500 text-[10px] uppercase tracking-wider font-semibold">Document Reference</div>
-              <div className="font-black text-stone-900 text-sm">{reportRefId}</div>
+              <div className="font-black text-stone-900 text-sm sm:text-base">{reportRefId}</div>
               <div className="text-[11px] text-stone-600 flex sm:justify-end items-center gap-1">
                 <Calendar className="w-3 h-3 text-stone-400" />
                 <span>Date: {currentDate}</span>
@@ -501,10 +624,10 @@ export default function AnalysisResultView({ analysis, imageUrl, isPreset }: Ana
           </div>
 
           {/* Sample Metadata Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-stone-200 text-xs font-sans bg-stone-50/80 p-4 rounded-2xl border border-stone-200">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 pt-4 border-t border-stone-200 text-xs font-sans bg-stone-50/80 p-4 sm:p-5 rounded-2xl border border-stone-200">
             <div>
               <span className="text-[10px] text-stone-400 uppercase font-mono font-bold block">Soil Classification</span>
-              <span className={`inline-block mt-0.5 px-2 py-0.5 text-xs font-extrabold rounded border uppercase font-heading ${getSoilBadgeColor(analysis.soilType)}`}>
+              <span className={`inline-block mt-0.5 px-2.5 py-0.5 text-xs font-extrabold rounded border uppercase font-heading ${getSoilBadgeColor(analysis.soilType)}`}>
                 {analysis.soilType}
               </span>
             </div>
@@ -531,14 +654,14 @@ export default function AnalysisResultView({ analysis, imageUrl, isPreset }: Ana
 
         {/* SECTION 1: EXECUTIVE DIAGNOSTIC SUMMARY */}
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-950 font-mono border-b border-stone-200 pb-1.5">
-            <span className="w-2 h-2 bg-emerald-700 rounded-full"></span>
+          <div className="flex items-center gap-2 text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-950 font-mono border-b border-stone-200 pb-1.5">
+            <span className="w-2.5 h-2.5 bg-emerald-700 rounded-full"></span>
             <h2>1. EXECUTIVE AGRONOMIC SUMMARY</h2>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-5 items-start bg-emerald-50/40 border border-emerald-200/80 p-5 rounded-2xl">
+          <div className="flex flex-col md:flex-row gap-5 md:gap-6 items-start bg-emerald-50/40 border border-emerald-200/80 p-5 sm:p-6 rounded-2xl">
             {imageUrl && (
-              <div className="w-full sm:w-36 h-36 rounded-xl overflow-hidden bg-stone-100 shrink-0 border border-emerald-200 shadow-xs">
+              <div className="w-full md:w-48 h-48 sm:h-52 md:h-44 rounded-xl overflow-hidden bg-stone-100 shrink-0 border border-emerald-200 shadow-xs">
                 <img 
                   src={imageUrl} 
                   alt={analysis.soilType} 
@@ -549,7 +672,7 @@ export default function AnalysisResultView({ analysis, imageUrl, isPreset }: Ana
             )}
             
             <div className="space-y-2 flex-1 font-sans">
-              <h3 className="text-base font-extrabold text-stone-900 font-heading">
+              <h3 className="text-base sm:text-lg font-extrabold text-stone-900 font-heading">
                 Soil Profile Analysis & Key Findings
               </h3>
               <p className="text-xs sm:text-sm text-stone-700 leading-relaxed font-medium">
@@ -561,67 +684,67 @@ export default function AnalysisResultView({ analysis, imageUrl, isPreset }: Ana
 
         {/* SECTION 2: QUANTITATIVE SOIL METRICS & CHEMISTRY MATRIX */}
         <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-950 font-mono border-b border-stone-200 pb-1.5">
-            <span className="w-2 h-2 bg-emerald-700 rounded-full"></span>
+          <div className="flex items-center gap-2 text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-950 font-mono border-b border-stone-200 pb-1.5">
+            <span className="w-2.5 h-2.5 bg-emerald-700 rounded-full"></span>
             <h2>2. QUANTITATIVE SOIL METRICS & PHYSICAL PROPERTIES</h2>
           </div>
 
           {/* Primary Physics Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
             <motion.div 
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: 0.05 }}
-              className="border border-stone-200 p-3.5 rounded-2xl bg-stone-50/50 hover:bg-stone-50 transition-all hover:border-amber-300/80 shadow-2xs"
+              className="border border-stone-200 p-4 rounded-2xl bg-stone-50/50 hover:bg-stone-50 transition-all hover:border-amber-300/80 shadow-2xs"
             >
-              <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1 font-mono">
+              <span className="text-[10px] sm:text-xs font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1 font-mono">
                 <Flame className="w-3.5 h-3.5 text-amber-600" />
                 <GlossaryTooltip termKey="ph">pH Balance</GlossaryTooltip>
               </span>
-              <p className="text-base font-extrabold text-stone-900 font-heading mt-1">{analysis.phRange}</p>
-              <span className="text-[10px] text-stone-500 block mt-0.5">Reaction Index</span>
+              <p className="text-base sm:text-lg font-extrabold text-stone-900 font-heading mt-1">{analysis.phRange}</p>
+              <span className="text-[10px] sm:text-xs text-stone-500 block mt-0.5">Reaction Index</span>
             </motion.div>
 
             <motion.div 
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: 0.12 }}
-              className="border border-stone-200 p-3.5 rounded-2xl bg-stone-50/50 hover:bg-stone-50 transition-all hover:border-blue-300/80 shadow-2xs"
+              className="border border-stone-200 p-4 rounded-2xl bg-stone-50/50 hover:bg-stone-50 transition-all hover:border-blue-300/80 shadow-2xs"
             >
-              <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1 font-mono">
+              <span className="text-[10px] sm:text-xs font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1 font-mono">
                 <Droplets className="w-3.5 h-3.5 text-blue-600" />
                 <GlossaryTooltip termKey="moisture">Moisture Retention</GlossaryTooltip>
               </span>
-              <p className="text-base font-extrabold text-stone-900 font-heading mt-1">{analysis.moistureRetention.split('.')[0]}</p>
-              <span className="text-[10px] text-stone-500 block mt-0.5">Water Holding Capacity</span>
+              <p className="text-base sm:text-lg font-extrabold text-stone-900 font-heading mt-1">{analysis.moistureRetention.split('.')[0]}</p>
+              <span className="text-[10px] sm:text-xs text-stone-500 block mt-0.5">Water Holding Capacity</span>
             </motion.div>
 
             <motion.div 
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: 0.19 }}
-              className="border border-stone-200 p-3.5 rounded-2xl bg-stone-50/50 hover:bg-stone-50 transition-all hover:border-emerald-300/80 shadow-2xs"
+              className="border border-stone-200 p-4 rounded-2xl bg-stone-50/50 hover:bg-stone-50 transition-all hover:border-emerald-300/80 shadow-2xs"
             >
-              <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1 font-mono">
+              <span className="text-[10px] sm:text-xs font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1 font-mono">
                 <Compass className="w-3.5 h-3.5 text-emerald-600" />
                 <GlossaryTooltip termKey="texture">Soil Texture</GlossaryTooltip>
               </span>
-              <p className="text-base font-extrabold text-stone-900 font-heading capitalize mt-1">{analysis.texture}</p>
-              <span className="text-[10px] text-stone-500 block mt-0.5">Particle Composition</span>
+              <p className="text-base sm:text-lg font-extrabold text-stone-900 font-heading capitalize mt-1">{analysis.texture}</p>
+              <span className="text-[10px] sm:text-xs text-stone-500 block mt-0.5">Particle Composition</span>
             </motion.div>
 
             <motion.div 
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, delay: 0.26 }}
-              className="border border-stone-200 p-3.5 rounded-2xl bg-stone-50/50 hover:bg-stone-50 transition-all hover:border-stone-300 shadow-2xs"
+              className="border border-stone-200 p-4 rounded-2xl bg-stone-50/50 hover:bg-stone-50 transition-all hover:border-stone-300 shadow-2xs"
             >
-              <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1 font-mono">
+              <span className="text-[10px] sm:text-xs font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1 font-mono">
                 <Tag className="w-3.5 h-3.5 text-stone-500" />
                 <GlossaryTooltip termKey="organic_matter">Organic Humus</GlossaryTooltip>
               </span>
-              <p className="text-base font-extrabold text-stone-900 font-heading capitalize mt-1">{analysis.color}</p>
-              <span className="text-[10px] text-stone-500 block mt-0.5">Organic Content Indicator</span>
+              <p className="text-base sm:text-lg font-extrabold text-stone-900 font-heading capitalize mt-1">{analysis.color}</p>
+              <span className="text-[10px] sm:text-xs text-stone-500 block mt-0.5">Organic Content Indicator</span>
             </motion.div>
           </div>
 
@@ -744,7 +867,7 @@ export default function AnalysisResultView({ analysis, imageUrl, isPreset }: Ana
               The following organic and chemical soil conditioning formulations have been calculated to balance NPK ratios and soil structure:
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
               {analysis.fertilizerRecommendations.map((rec, idx) => (
                 <motion.div 
                   key={idx} 
@@ -838,7 +961,7 @@ export default function AnalysisResultView({ analysis, imageUrl, isPreset }: Ana
             <h2>5. RECOMMENDED CROP COMPATIBILITY MATRIX</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {analysis.suitableCrops.map((crop, idx) => (
               <motion.div 
                 key={idx} 

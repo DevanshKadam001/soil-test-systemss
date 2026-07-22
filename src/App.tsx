@@ -23,7 +23,13 @@ import {
   Award,
   LogIn,
   CheckCircle,
-  FileCheck
+  FileCheck,
+  Maximize2,
+  Columns,
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  RotateCcw
 } from "lucide-react";
 
 export default function App() {
@@ -33,6 +39,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<SavedAnalysis[]>([]);
   const [activeTab, setActiveTab] = useState<"photo" | "lab_report">("photo");
+  const [viewMode, setViewMode] = useState<"full" | "split">("full");
+  const [showInputPanel, setShowInputPanel] = useState<boolean>(false);
   
   // User authentication state
   const [user, setUser] = useState<UserProfile>({
@@ -152,6 +160,7 @@ export default function App() {
       }
 
       setActiveAnalysis(result);
+      setShowInputPanel(false);
 
       // Save to history list
       const newRecord: SavedAnalysis = {
@@ -205,6 +214,7 @@ export default function App() {
       }
 
       setActiveAnalysis(result);
+      setShowInputPanel(false);
 
       // Save to history list
       const newRecord: SavedAnalysis = {
@@ -234,6 +244,7 @@ export default function App() {
     setError(null);
     setActiveAnalysis(item.analysis);
     setActiveImageUrl(item.imageUrl || null);
+    setShowInputPanel(false);
     if (item.analysisType) {
       setActiveTab(item.analysisType);
     }
@@ -325,74 +336,106 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab Switcher: Light Green Section */}
-        <div className="bg-[#e6f3eb] p-1.5 rounded-2xl border border-[#b0d6be] flex items-center gap-1 max-w-xl shadow-xs">
-          <button
-            onClick={() => {
-              setActiveTab("photo");
-              setError(null);
-            }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all font-heading cursor-pointer ${
-              activeTab === "photo"
-                ? "bg-[#0a2e1a] text-white shadow-md ring-1 ring-[#164d2d]"
-                : "text-[#082212] hover:bg-[#d8ebd9]"
-            }`}
-            id="tab-photo-btn"
-          >
-            <Sprout className={`w-4 h-4 ${activeTab === "photo" ? "text-emerald-300" : "text-emerald-700"}`} />
-            <span>Soil Photo Diagnostics</span>
-          </button>
-          
-          <button
-            onClick={() => {
-              setActiveTab("lab_report");
-              setError(null);
-            }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all font-heading cursor-pointer ${
-              activeTab === "lab_report"
-                ? "bg-[#0a2e1a] text-white shadow-md ring-1 ring-[#164d2d]"
-                : "text-[#082212] hover:bg-[#d8ebd9]"
-            }`}
-            id="tab-lab-btn"
-          >
-            <FileText className={`w-4 h-4 ${activeTab === "lab_report" ? "text-emerald-300" : "text-emerald-700"}`} />
-            <span>Soil Lab Report Analyzer</span>
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-mono ${activeTab === "lab_report" ? "bg-emerald-800 text-white" : "bg-[#cce6d3] text-[#082212] font-bold"}`}>
-              OCR
-            </span>
-          </button>
-        </div>
+        {/* Workspace Layout */}
+        {activeAnalysis ? (
+          /* ACTIVE REPORT WORKSPACE */
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Top Control Bar for Active Report */}
+            <div className="bg-[#e6f3eb] p-3 sm:p-4 rounded-2xl border border-[#b0d6be] shadow-xs text-[#082212] flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 flex-wrap text-xs font-bold font-heading">
+                <span className="px-2.5 py-1 bg-[#0a2e1a] text-emerald-300 rounded-lg border border-[#164d2d] flex items-center gap-1.5 font-mono">
+                  <Sprout className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>ACTIVE: {activeAnalysis.soilType.toUpperCase()}</span>
+                </span>
 
-        {/* Grid Workspace */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* LEFT COLUMN: Input Forms, Presets, History */}
-          <div className="lg:col-span-5 space-y-6">
-            
-            {activeTab === "photo" ? (
-              <div className="space-y-6">
-                {/* Image Scanner Box */}
-                <ImageUploader 
-                  onImageSelected={handleImageSelected} 
-                  isLoading={isLoading} 
-                />
+                <button
+                  onClick={() => setShowInputPanel(!showInputPanel)}
+                  className="px-3 py-1.5 bg-[#d8ebd9] hover:bg-[#c6e2ca] text-[#082212] rounded-xl border border-[#a2d3b2] flex items-center gap-1.5 transition-colors cursor-pointer"
+                  id="toggle-input-panel-btn"
+                >
+                  <Plus className="w-3.5 h-3.5 text-emerald-800" />
+                  <span>{showInputPanel ? "Hide Scanner / Input Form" : "Analyze Another Sample"}</span>
+                  {showInputPanel ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveAnalysis(null);
+                    setActiveImageUrl(null);
+                    setShowInputPanel(true);
+                  }}
+                  className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-xl border border-rose-300 flex items-center gap-1.5 transition-colors cursor-pointer text-xs"
+                  id="reset-analysis-btn"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-700" />
+                  <span>Reset View</span>
+                </button>
               </div>
-            ) : (
-              <div className="bg-[#e6f3eb] rounded-2xl border border-[#b0d6be] p-5 sm:p-6 shadow-sm text-[#082212]">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 bg-[#0a2e1a] rounded-lg text-emerald-300 border border-[#164d2d]">
-                    <FileCheck className="w-4 h-4" />
+
+              {/* Desktop View Mode Switcher */}
+              <div className="hidden lg:flex items-center gap-1 bg-[#d8ebd9] p-1 rounded-xl border border-[#a2d3b2] text-xs font-bold font-heading">
+                <button
+                  onClick={() => setViewMode("full")}
+                  className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                    viewMode === "full"
+                      ? "bg-[#0a2e1a] text-emerald-200 shadow-2xs"
+                      : "text-[#082212] hover:bg-[#c2dec5]"
+                  }`}
+                  id="viewmode-full-btn"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Full Width Widescreen</span>
+                </button>
+                <button
+                  onClick={() => setViewMode("split")}
+                  className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                    viewMode === "split"
+                      ? "bg-[#0a2e1a] text-emerald-200 shadow-2xs"
+                      : "text-[#082212] hover:bg-[#c2dec5]"
+                  }`}
+                  id="viewmode-split-btn"
+                >
+                  <Columns className="w-3.5 h-3.5" />
+                  <span>Side-by-Side Split</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Expandable Scanner / Form Panel when report is active */}
+            {showInputPanel && (
+              <div className="bg-[#e6f3eb] p-5 sm:p-6 rounded-3xl border border-[#b0d6be] shadow-md animate-in slide-in-from-top-2 duration-300 text-[#082212] space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#b0d6be]">
+                  <div className="flex items-center gap-2">
+                    <Sprout className="w-5 h-5 text-emerald-800" />
+                    <h3 className="text-sm font-bold font-heading uppercase tracking-wide">
+                      {activeTab === "photo" ? "Upload New Soil Photograph" : "Enter Laboratory Measurements"}
+                    </h3>
                   </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-[#082212] uppercase tracking-wide font-heading">Lab Report Translation Engine</h3>
-                    <p className="text-[10px] text-[#1b4e2e] font-medium">Provide lab sheets or input raw chemical measurements</p>
+                  
+                  {/* Tab switcher inside active drawer */}
+                  <div className="flex items-center gap-1 bg-[#d8ebd9] p-1 rounded-xl border border-[#a2d3b2] text-xs font-bold font-heading">
+                    <button
+                      onClick={() => setActiveTab("photo")}
+                      className={`px-2.5 py-1 rounded-lg ${activeTab === "photo" ? "bg-[#0a2e1a] text-white" : "text-[#082212]"}`}
+                    >
+                      Photo
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("lab_report")}
+                      className={`px-2.5 py-1 rounded-lg ${activeTab === "lab_report" ? "bg-[#0a2e1a] text-white" : "text-[#082212]"}`}
+                    >
+                      Lab Sheet
+                    </button>
                   </div>
                 </div>
-                
-                <LabReportForm 
-                  onAnalyze={handleAnalyzeLabReport}
-                  isLoading={isLoading}
-                />
+
+                <div className="max-w-3xl mx-auto">
+                  {activeTab === "photo" ? (
+                    <ImageUploader onImageSelected={handleImageSelected} isLoading={isLoading} />
+                  ) : (
+                    <LabReportForm onAnalyze={handleAnalyzeLabReport} isLoading={isLoading} />
+                  )}
+                </div>
               </div>
             )}
 
@@ -406,69 +449,170 @@ export default function App() {
                 onClose={() => setShowHistory(false)}
               />
             )}
-          </div>
 
-          {/* RIGHT VIEW COLUMN: Interactive Results View */}
-          <div className="lg:col-span-7">
-            {activeAnalysis ? (
-              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* REPORT VIEW: Render Full Width or Split View */}
+            {viewMode === "split" ? (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div className="lg:col-span-5 space-y-6">
+                  {activeTab === "photo" ? (
+                    <ImageUploader onImageSelected={handleImageSelected} isLoading={isLoading} />
+                  ) : (
+                    <div className="bg-[#e6f3eb] rounded-2xl border border-[#b0d6be] p-5 sm:p-6 shadow-sm text-[#082212]">
+                      <LabReportForm onAnalyze={handleAnalyzeLabReport} isLoading={isLoading} />
+                    </div>
+                  )}
+                </div>
+                <div className="lg:col-span-7">
+                  <AnalysisResultView 
+                    analysis={activeAnalysis} 
+                    imageUrl={activeImageUrl || undefined}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="w-full">
                 <AnalysisResultView 
                   analysis={activeAnalysis} 
                   imageUrl={activeImageUrl || undefined}
                 />
               </div>
-            ) : (
-              // Empty State - Light Green Section
-              <div className="bg-[#e6f3eb] rounded-2xl border border-[#b0d6be] p-8 sm:p-12 text-center flex flex-col items-center justify-center min-h-[500px] shadow-sm relative overflow-hidden text-[#082212]">
-                <div className="absolute inset-0 bg-radial from-emerald-400/15 to-transparent pointer-events-none" />
-                
-                <div className="w-16 h-16 rounded-2xl bg-[#d8ebd9] border border-[#a2d3b2] flex items-center justify-center text-emerald-800 mb-6 shadow-inner">
-                  <Sprout className="w-8 h-8 text-emerald-700" />
-                </div>
-
-                <h3 className="text-base sm:text-lg font-bold text-[#082212] tracking-tight font-heading">
-                  No Diagnostic Report Loaded
-                </h3>
-                
-                <p className="text-xs text-[#18482a] max-w-sm mt-2 leading-relaxed font-sans font-medium">
-                  {activeTab === "photo" 
-                    ? "Upload a close-up soil photograph to generate a diagnostic report."
-                    : "Fill in chemical soil values or upload a physical laboratory sheet to activate our agronomical interpretation module."}
-                </p>
-
-                {/* Interactive onboarding options list */}
-                <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md w-full">
-                  <div 
-                    onClick={() => setActiveTab("photo")}
-                    className="p-3 bg-[#d8ebd9] rounded-xl border border-[#a2d3b2] text-left space-y-1 cursor-pointer hover:border-emerald-600 transition-colors shadow-2xs"
-                  >
-                    <span className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider block">Method A</span>
-                    <h4 className="text-xs font-bold text-[#082212] font-heading">Photo Diagnostics</h4>
-                    <p className="text-[10px] text-[#1b4e2e] leading-normal font-medium">
-                      Examines visual parameters of real topsoil image instantly.
-                    </p>
-                  </div>
-                  <div 
-                    onClick={() => setActiveTab("lab_report")}
-                    className="p-3 bg-[#d8ebd9] rounded-xl border border-[#a2d3b2] text-left space-y-1 cursor-pointer hover:border-emerald-600 transition-colors shadow-2xs"
-                  >
-                    <span className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider block">Method B</span>
-                    <h4 className="text-xs font-bold text-[#082212] font-heading">Lab Reports</h4>
-                    <p className="text-[10px] text-[#1b4e2e] leading-normal font-medium">
-                      Explains laboratory measures (pH, N, P, K) into a simple plan.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-8 flex items-center gap-1.5 text-[10px] text-emerald-800 font-mono font-bold">
-                  <Award className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>PRECISION AGRONOMY SYSTEM</span>
-                </div>
-              </div>
             )}
           </div>
+        ) : (
+          /* NO REPORT ACTIVE: Standard Input + Onboarding Workspace */
+          <div className="space-y-6">
+            {/* Tab Switcher: Light Green Section */}
+            <div className="bg-[#e6f3eb] p-1.5 rounded-2xl border border-[#b0d6be] flex items-center gap-1 max-w-xl shadow-xs">
+              <button
+                onClick={() => {
+                  setActiveTab("photo");
+                  setError(null);
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all font-heading cursor-pointer ${
+                  activeTab === "photo"
+                    ? "bg-[#0a2e1a] text-white shadow-md ring-1 ring-[#164d2d]"
+                    : "text-[#082212] hover:bg-[#d8ebd9]"
+                }`}
+                id="tab-photo-btn"
+              >
+                <Sprout className={`w-4 h-4 ${activeTab === "photo" ? "text-emerald-300" : "text-emerald-700"}`} />
+                <span>Soil Photo Diagnostics</span>
+              </button>
+              
+              <button
+                onClick={() => {
+                  setActiveTab("lab_report");
+                  setError(null);
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm transition-all font-heading cursor-pointer ${
+                  activeTab === "lab_report"
+                    ? "bg-[#0a2e1a] text-white shadow-md ring-1 ring-[#164d2d]"
+                    : "text-[#082212] hover:bg-[#d8ebd9]"
+                }`}
+                id="tab-lab-btn"
+              >
+                <FileText className={`w-4 h-4 ${activeTab === "lab_report" ? "text-emerald-300" : "text-emerald-700"}`} />
+                <span>Soil Lab Report Analyzer</span>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-mono ${activeTab === "lab_report" ? "bg-emerald-800 text-white" : "bg-[#cce6d3] text-[#082212] font-bold"}`}>
+                  OCR
+                </span>
+              </button>
+            </div>
 
-        </div>
+            {/* Grid Workspace */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* LEFT COLUMN: Input Forms */}
+              <div className="lg:col-span-5 space-y-6">
+                {activeTab === "photo" ? (
+                  <div className="space-y-6">
+                    <ImageUploader 
+                      onImageSelected={handleImageSelected} 
+                      isLoading={isLoading} 
+                    />
+                  </div>
+                ) : (
+                  <div className="bg-[#e6f3eb] rounded-2xl border border-[#b0d6be] p-5 sm:p-6 shadow-sm text-[#082212]">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="p-1.5 bg-[#0a2e1a] rounded-lg text-emerald-300 border border-[#164d2d]">
+                        <FileCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-bold text-[#082212] uppercase tracking-wide font-heading">Lab Report Translation Engine</h3>
+                        <p className="text-[10px] text-[#1b4e2e] font-medium">Provide lab sheets or input raw chemical measurements</p>
+                      </div>
+                    </div>
+                    
+                    <LabReportForm 
+                      onAnalyze={handleAnalyzeLabReport}
+                      isLoading={isLoading}
+                    />
+                  </div>
+                )}
+
+                {/* Saved tests / Historic modal dialog */}
+                {showHistory && (
+                  <SavedHistoryList 
+                    history={history}
+                    onSelect={handleSelectHistoryItem}
+                    onDelete={handleDeleteHistoryItem}
+                    selectedId={history.find(h => h.imageUrl === activeImageUrl)?.id}
+                    onClose={() => setShowHistory(false)}
+                  />
+                )}
+              </div>
+
+              {/* RIGHT VIEW COLUMN: Empty State */}
+              <div className="lg:col-span-7">
+                <div className="bg-[#e6f3eb] rounded-2xl border border-[#b0d6be] p-8 sm:p-12 text-center flex flex-col items-center justify-center min-h-[500px] shadow-sm relative overflow-hidden text-[#082212]">
+                  <div className="absolute inset-0 bg-radial from-emerald-400/15 to-transparent pointer-events-none" />
+                  
+                  <div className="w-16 h-16 rounded-2xl bg-[#d8ebd9] border border-[#a2d3b2] flex items-center justify-center text-emerald-800 mb-6 shadow-inner">
+                    <Sprout className="w-8 h-8 text-emerald-700" />
+                  </div>
+
+                  <h3 className="text-base sm:text-lg font-bold text-[#082212] tracking-tight font-heading">
+                    No Diagnostic Report Loaded
+                  </h3>
+                  
+                  <p className="text-xs text-[#18482a] max-w-sm mt-2 leading-relaxed font-sans font-medium">
+                    {activeTab === "photo" 
+                      ? "Upload a close-up soil photograph to generate a diagnostic report."
+                      : "Fill in chemical soil values or upload a physical laboratory sheet to activate our agronomical interpretation module."}
+                  </p>
+
+                  {/* Interactive onboarding options list */}
+                  <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md w-full">
+                    <div 
+                      onClick={() => setActiveTab("photo")}
+                      className="p-3 bg-[#d8ebd9] rounded-xl border border-[#a2d3b2] text-left space-y-1 cursor-pointer hover:border-emerald-600 transition-colors shadow-2xs"
+                    >
+                      <span className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider block">Method A</span>
+                      <h4 className="text-xs font-bold text-[#082212] font-heading">Photo Diagnostics</h4>
+                      <p className="text-[10px] text-[#1b4e2e] leading-normal font-medium">
+                        Examines visual parameters of real topsoil image instantly.
+                      </p>
+                    </div>
+                    <div 
+                      onClick={() => setActiveTab("lab_report")}
+                      className="p-3 bg-[#d8ebd9] rounded-xl border border-[#a2d3b2] text-left space-y-1 cursor-pointer hover:border-emerald-600 transition-colors shadow-2xs"
+                    >
+                      <span className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider block">Method B</span>
+                      <h4 className="text-xs font-bold text-[#082212] font-heading">Lab Reports</h4>
+                      <p className="text-[10px] text-[#1b4e2e] leading-normal font-medium">
+                        Explains laboratory measures (pH, N, P, K) into a simple plan.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 flex items-center gap-1.5 text-[10px] text-emerald-800 font-mono font-bold">
+                    <Award className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>PRECISION AGRONOMY SYSTEM</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       </main>
 
