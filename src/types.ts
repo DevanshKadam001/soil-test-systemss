@@ -22,6 +22,7 @@ export interface FertilizerRec {
 
 export interface SoilAnalysis {
   soilType: string; // e.g., Sandy, Clay, Silty, Peaty, Chalky, Loamy
+  simpleExplanation?: string; // Clear, simple terms explanation of soil type and health
   confidenceScore: number; // 0-100 percentage
   color: string;
   texture: string;

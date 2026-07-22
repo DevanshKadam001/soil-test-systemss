@@ -1,1 +1,104 @@
 @import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #092215;
+    color: #0b2918;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom Scrollbar for Bottle Green Theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #18482a;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #235e39;
+}
+
+/* Light Green Glass Cards */
+.glass-card {
+  background: #eaf4ed;
+  backdrop-filter: blur(12px);
+  border: 1px solid #b2d8be;
+  color: #092215;
+}
+
+/* Bottle Green agricultural mesh background for whole website */
+.bg-mesh-pattern {
+  background-color: #092215;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(34, 94, 57, 0.35) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(20, 60, 36, 0.4) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(13, 40, 24, 0.3) 0px, transparent 65%),
+    radial-gradient(at 100% 100%, rgba(27, 78, 47, 0.35) 0px, transparent 50%),
+    radial-gradient(circle at 1px 1px, rgba(46, 122, 75, 0.2) 1px, transparent 0);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 28px 28px;
+}
+
+/* Print Styles for Vector PDF Generation */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    background-image: none !important;
+  }
+
+  header, 
+  footer, 
+  #login-container, 
+  #share-btn, 
+  #print-btn, 
+  #download-pdf-btn, 
+  #download-txt-btn, 
+  #history-btn, 
+  #fallback-alert-banner,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .print\:border-none {
+    border: none !important;
+  }
+
+  .print\:shadow-none {
+    box-shadow: none !important;
+  }
+
+  .print\:p-0 {
+    padding: 0 !important;
+  }
+
+  .print\:w-full {
+    width: 100% !important;
+  }
+
+  .print\:max-w-none {
+    max-width: none !important;
+  }
+
+  .print\:m-0 {
+    margin: 0 !important;
+  }
+}
+

@@ -148,42 +148,42 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col justify-between" id="login-container">
+    <div className="min-h-screen bg-[#092215] bg-mesh-pattern flex flex-col justify-between" id="login-container">
       {/* Upper section */}
       <div className="flex-grow flex items-center justify-center p-4 sm:p-6 md:p-8">
-        <div className="w-full max-w-md bg-white rounded-3xl border border-stone-200/60 shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
+        <div className="w-full max-w-md bg-[#e6f3eb] text-[#082212] rounded-3xl border border-[#b0d6be] shadow-2xl overflow-hidden transition-all duration-300">
           {/* Accent Header */}
-          <div className="bg-stone-900 px-6 py-8 text-white relative overflow-hidden">
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+          <div className="bg-[#d8ebd9] px-6 py-8 text-[#082212] relative overflow-hidden border-b border-[#a2d3b2]">
+            <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#164d2d_1px,transparent_1px)] [background-size:16px_16px]"></div>
             <div className="relative flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center mb-4 border border-emerald-500/30">
-                <Sparkles className="w-6 h-6 text-emerald-400" />
+              <div className="w-12 h-12 rounded-2xl bg-[#c3e2cd] flex items-center justify-center mb-4 border border-[#9ed0b0]">
+                <Sparkles className="w-6 h-6 text-emerald-800" />
               </div>
-              <h1 className="text-2xl font-semibold tracking-tight">Soil Diagnostic System</h1>
-              <p className="text-xs text-stone-400 mt-1.5 max-w-xs">
+              <h1 className="text-2xl font-bold tracking-tight text-[#082212] font-heading">Soil Diagnostic System</h1>
+              <p className="text-xs text-[#18482a] mt-1.5 max-w-xs font-sans font-medium">
                 AI-Powered Agronomical & Lab Report Interpretation Portal
               </p>
             </div>
           </div>
 
           {/* Tab Selector */}
-          <div className="flex border-b border-stone-100">
+          <div className="flex border-b border-[#b0d6be]">
             <button
               onClick={() => { setActiveTab("google"); setError(null); }}
-              className={`flex-1 py-3 text-xs font-semibold border-b-2 transition-all ${
+              className={`flex-1 py-3 text-xs font-bold border-b-2 transition-all font-heading cursor-pointer ${
                 activeTab === "google"
-                  ? "border-emerald-600 text-stone-900"
-                  : "border-transparent text-stone-400 hover:text-stone-600"
+                  ? "border-emerald-700 text-[#082212] bg-[#cbe2cd]"
+                  : "border-transparent text-[#18482a] hover:text-[#082212]"
               }`}
             >
               Google Access
             </button>
             <button
               onClick={() => { setActiveTab("email"); setError(null); }}
-              className={`flex-1 py-3 text-xs font-semibold border-b-2 transition-all ${
+              className={`flex-1 py-3 text-xs font-bold border-b-2 transition-all font-heading cursor-pointer ${
                 activeTab === "email"
-                  ? "border-emerald-600 text-stone-900"
-                  : "border-transparent text-stone-400 hover:text-stone-600"
+                  ? "border-emerald-700 text-[#082212] bg-[#cbe2cd]"
+                  : "border-transparent text-[#18482a] hover:text-[#082212]"
               }`}
             >
               Email Access
@@ -193,8 +193,8 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
           {/* Body Content */}
           <div className="p-6 sm:p-8">
             {error && (
-              <div className="mb-5 p-3.5 bg-red-50 border border-red-200/60 text-red-700 text-xs rounded-xl flex items-start gap-2.5">
-                <Shield className="w-4 h-4 mt-0.5 shrink-0 text-red-500" />
+              <div className="mb-5 p-3.5 bg-rose-100 border border-rose-300 text-rose-900 text-xs rounded-xl flex items-start gap-2.5">
+                <Shield className="w-4 h-4 mt-0.5 shrink-0 text-rose-700" />
                 <div className="leading-relaxed font-medium">{error}</div>
               </div>
             )}
@@ -205,7 +205,7 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
                 <button
                   onClick={handleGoogleSignIn}
                   disabled={isConnecting}
-                  className="w-full flex items-center justify-center gap-3 bg-white hover:bg-stone-50 text-stone-700 font-medium text-sm py-3 px-4 border border-stone-300 rounded-xl transition-all duration-200 hover:border-stone-400 active:scale-[0.98] disabled:opacity-50 shadow-sm"
+                  className="w-full flex items-center justify-center gap-3 bg-white hover:bg-[#eef7f1] text-[#082212] font-bold text-sm py-3 px-4 border border-[#a2d3b2] rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 shadow-xs cursor-pointer"
                   id="google-signin-btn"
                 >
                   <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
@@ -229,17 +229,17 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
                   <span>{isConnecting ? "Connecting to Google..." : "Sign in with Google"}</span>
                 </button>
 
-                <div className="flex items-center my-4 text-xs text-stone-400">
-                  <span className="flex-grow border-t border-stone-200"></span>
-                  <span className="px-3">or</span>
-                  <span className="flex-grow border-t border-stone-200"></span>
+                <div className="flex items-center my-4 text-xs text-[#18482a] font-medium">
+                  <span className="flex-grow border-t border-[#b0d6be]"></span>
+                  <span className="px-3 font-mono">or</span>
+                  <span className="flex-grow border-t border-[#b0d6be]"></span>
                 </div>
 
                 {/* Seamless Demo Button */}
                 <button
                   onClick={handleDemoSignIn}
                   disabled={isConnecting}
-                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm py-3 px-4 rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 shadow-sm"
+                  className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-sm py-3 px-4 rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 shadow-sm cursor-pointer font-heading"
                   id="demo-signin-btn"
                 >
                   <LogIn className="w-4 h-4" />
@@ -250,17 +250,17 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
               <form onSubmit={handleEmailAuth} className="space-y-4">
                 {/* Email Field */}
                 <div>
-                  <label className="block text-xs font-semibold text-stone-500 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#082212] mb-1.5 uppercase tracking-wider font-mono">
                     Email Address
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-800" />
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="farmer@example.com"
-                      className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-stone-300 focus:outline-none focus:border-emerald-600 bg-stone-50/50"
+                      className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-[#9ed0b0] focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 bg-white text-[#082212] font-medium placeholder-[#1b4e2e]/50 shadow-2xs"
                       required
                     />
                   </div>
@@ -268,23 +268,23 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
 
                 {/* Password Field */}
                 <div>
-                  <label className="block text-xs font-semibold text-stone-500 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#082212] mb-1.5 uppercase tracking-wider font-mono">
                     Password
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-800" />
                     <input
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border border-stone-300 focus:outline-none focus:border-emerald-600 bg-stone-50/50"
+                      className="w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border border-[#9ed0b0] focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 bg-white text-[#082212] font-medium placeholder-[#1b4e2e]/50 shadow-2xs"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-800 hover:text-emerald-950 cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -295,7 +295,7 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
                 <button
                   type="submit"
                   disabled={isConnecting}
-                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm py-3 px-4 rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 shadow-sm mt-2"
+                  className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-sm py-3 px-4 rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 shadow-sm mt-2 cursor-pointer font-heading"
                 >
                   {isSignUp ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
                   <span>
@@ -312,7 +312,7 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
                   <button
                     type="button"
                     onClick={() => { setIsSignUp(!isSignUp); setError(null); }}
-                    className="text-xs text-emerald-700 hover:underline font-semibold"
+                    className="text-xs text-emerald-800 hover:underline font-bold cursor-pointer"
                   >
                     {isSignUp 
                       ? "Already have an account? Sign In" 
@@ -323,53 +323,53 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
             )}
 
             {/* Quick explanation */}
-            <p className="text-[11px] text-stone-500 text-center mt-6 leading-relaxed">
-              Firebase Auth securely manages identity credentials. Sign up in seconds or utilize the <strong className="font-semibold text-emerald-700">Demo Guest Access</strong> shortcut for instant access.
+            <p className="text-[11px] text-[#18482a] text-center mt-6 leading-relaxed font-medium">
+              Firebase Auth securely manages identity credentials. Sign up in seconds or utilize the <strong className="font-bold text-[#082212]">Demo Guest Access</strong> shortcut for instant access.
             </p>
 
             {/* Help configuration toggle */}
-            <div className="mt-8 pt-6 border-t border-stone-100">
+            <div className="mt-8 pt-6 border-t border-[#b0d6be]">
               <button
                 onClick={() => setShowInstructions(!showInstructions)}
-                className="w-full flex items-center justify-between text-stone-600 hover:text-stone-900 transition-colors py-1 text-xs font-semibold"
+                className="w-full flex items-center justify-between text-[#18482a] hover:text-[#082212] transition-colors py-1 text-xs font-bold cursor-pointer"
                 id="toggle-instructions-btn"
               >
                 <span className="flex items-center gap-1.5">
-                  <Settings className="w-3.5 h-3.5 text-stone-400" />
+                  <Settings className="w-3.5 h-3.5 text-emerald-800" />
                   Firebase Auth & Google Integration Instructions
                 </span>
                 {showInstructions ? (
-                  <ChevronUp className="w-4 h-4 text-stone-400" />
+                  <ChevronUp className="w-4 h-4 text-emerald-800" />
                 ) : (
-                  <ChevronDown className="w-4 h-4 text-stone-400" />
+                  <ChevronDown className="w-4 h-4 text-emerald-800" />
                 )}
               </button>
 
               {showInstructions && (
-                <div className="mt-4 bg-stone-50 rounded-2xl border border-stone-200/50 p-4 text-[11px] text-stone-600 space-y-3.5 leading-relaxed">
+                <div className="mt-4 bg-[#d8ebd9] rounded-2xl border border-[#a2d3b2] p-4 text-[11px] text-[#18482a] space-y-3.5 leading-relaxed font-medium">
                   <p>
-                    This applet connects directly to a real Firebase Cloud instance (<strong className="font-semibold text-stone-800">Project ID: glass-vector-bfs6l</strong>). Let's review the authorization guidelines:
+                    This applet connects directly to a real Firebase Cloud instance (<strong className="font-bold text-[#082212]">Project ID: glass-vector-bfs6l</strong>). Let's review the authorization guidelines:
                   </p>
                   
                   <div className="space-y-2">
-                    <div className="font-bold text-stone-800">1. Authorized Domains:</div>
+                    <div className="font-bold text-[#082212]">1. Authorized Domains:</div>
                     <p>
-                      If Google Sign-In gives an <code className="font-mono bg-stone-200 px-1 py-0.5 rounded text-stone-800">auth/unauthorized-domain</code> error, register this URL domain under Firebase Authentication console &gt; Settings &gt; Authorized Domains:
+                      If Google Sign-In gives an <code className="font-mono bg-white px-1 py-0.5 rounded text-[#082212] border border-[#a2d3b2]">auth/unauthorized-domain</code> error, register this URL domain under Firebase Authentication console &gt; Settings &gt; Authorized Domains:
                     </p>
-                    <div className="bg-stone-200/80 p-2 rounded-lg font-mono text-stone-800 break-all select-all">
+                    <div className="bg-white p-2 rounded-lg font-mono text-[#082212] border border-[#9ed0b0] break-all select-all font-bold">
                       {window.location.hostname}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <div className="font-bold text-stone-800">2. OAuth Consent Screen configuration:</div>
+                    <div className="font-bold text-[#082212]">2. OAuth Consent Screen configuration:</div>
                     <p>
-                      In Google Cloud Console, ensure Google Sign-In has been enabled for authentication. You can also utilize the built-in <strong className="font-semibold text-stone-800">Email/Password</strong> or <strong className="font-semibold text-stone-800">Guest Access</strong> fallback which runs immediately.
+                      In Google Cloud Console, ensure Google Sign-In has been enabled for authentication. You can also utilize the built-in <strong className="font-bold text-[#082212]">Email/Password</strong> or <strong className="font-bold text-[#082212]">Guest Access</strong> fallback which runs immediately.
                     </p>
                   </div>
 
-                  <div className="pt-1.5 flex items-center gap-1.5 text-emerald-800 font-medium">
-                    <Check className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+                  <div className="pt-1.5 flex items-center gap-1.5 text-emerald-900 font-bold">
+                    <Check className="w-3.5 h-3.5 shrink-0 text-emerald-700" />
                     <span>Real-time persistence and Cloud Firestore are active.</span>
                   </div>
                 </div>
@@ -380,8 +380,8 @@ export default function LoginView({ onLoginSuccess }: LoginViewProps) {
       </div>
 
       {/* Footer */}
-      <footer className="py-4 text-center text-[11px] text-stone-400 border-t border-stone-200/40 bg-white/50">
-        Soil Diagnostic System &copy; {new Date().getFullYear()} &middot; Designed for Intelligent Agriculture
+      <footer className="py-4 text-center text-[11px] text-emerald-200/80 border-t border-[#18482a] bg-[#061a10] font-mono">
+        Soil Diagnostic System &copy; {new Date().getFullYear()} &middot; Dedicated to Sustainable Agriculture
       </footer>
     </div>
   );

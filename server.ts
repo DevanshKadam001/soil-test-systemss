@@ -10,7 +10,19 @@ const app = express();
 const PORT = 3000;
 
 // Set up larger limit for base64 image uploads
-app.use(express.json({ limit: "15mb" }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// Custom JSON error middleware for express body-parser or route errors
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err) {
+    console.error("Express middleware error caught:", err);
+    return res.status(err.status || 500).json({
+      error: err.message || "An unexpected error occurred while parsing request body."
+    });
+  }
+  next();
+});
 
 // Google OAuth endpoints
 app.get("/api/auth/google/url", (req, res) => {
@@ -786,6 +798,53 @@ function getDeterministicSoilFallback(imageStr: string, analysisType: "image" | 
   };
 }
 
+// Helper function to query Gemini models with fallback candidates and exponential backoff
+async function generateSoilAnalysisWithGemini(
+  ai: ReturnType<typeof getGeminiClient>,
+  contents: any,
+  systemInstruction: string
+): Promise<string> {
+  const CANDIDATE_MODELS = [
+    "gemini-3.6-flash",
+    "gemini-flash-latest"
+  ];
+
+  let lastError: any = null;
+
+  for (const model of CANDIDATE_MODELS) {
+    let attempts = 2;
+    let delayMs = 800;
+
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: soilResponseSchema
+          }
+        });
+
+        if (response.text) {
+          return response.text.trim();
+        }
+      } catch (err: any) {
+        lastError = err;
+        const errMsg = String(err.message || err);
+        console.warn(`Gemini API call with model '${model}' attempt ${i + 1} failed:`, errMsg);
+
+        // If it's a transient 503, 429 or rate limit error, wait backoff before retrying
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        delayMs *= 1.5;
+      }
+    }
+  }
+
+  throw lastError || new Error("All Gemini model attempts failed or were unavailable.");
+}
+
 // API Endpoint to analyze soil photo
 app.post("/api/analyze-soil", async (req, res) => {
   try {
@@ -818,48 +877,13 @@ app.post("/api/analyze-soil", async (req, res) => {
       text: "Analyze this soil image in detail. Identify the soil type based on visual cues like grain size, clumping, moisture appearance, and color. Provide pH range, moisture retention, physical characteristics, and 3-4 suitable crops that are widely cultivated in India (including common Indian names where applicable). Also, output detailed fertilizer/nutrient recommendations (N, P, K status and organic/chemical suggestions) and a clear irrigation schedule with tips.",
     };
 
-    let responseText = "";
-    let attempts = 3;
-    let delayMs = 1000;
+    const systemInstruction = "You are an expert agronomist, soil scientist, and agricultural consultant. Provide accurate, practical, and scientific analysis of the soil sample from the image. CRITICAL REQUIREMENT: Explain all scientific findings, nutrient roles, and gardening steps in extremely simple, non-technical, layperson terms (avoiding complex technical jargon completely, or explaining them simply with analogies) so that an average farmer or garden enthusiast can easily understand and act upon them.";
 
-    for (let i = 0; i < attempts; i++) {
-      try {
-        const response = await ai.models.generateContent({
-          model: "gemini-3.5-flash",
-          contents: { parts: [imagePart, promptPart] },
-          config: {
-            systemInstruction: "You are an expert agronomist, soil scientist, and agricultural consultant. Provide accurate, practical, and scientific analysis of the soil sample from the image. CRITICAL REQUIREMENT: Explain all scientific findings, nutrient roles, and gardening steps in extremely simple, non-technical, layperson terms (avoiding complex technical jargon completely, or explaining them simply with analogies) so that an average farmer or garden enthusiast can easily understand and act upon them.",
-            responseMimeType: "application/json",
-            responseSchema: soilResponseSchema
-          }
-        });
-
-        if (response.text) {
-          responseText = response.text.trim();
-          break;
-        }
-      } catch (err: any) {
-        const errMsg = String(err.message || err);
-        console.warn(`Gemini API image attempt ${i + 1} failed:`, errMsg);
-
-        // Fail fast on daily rate limits, resource exhaustion, and other 429 errors
-        const isQuotaError = errMsg.includes("429") || 
-                             errMsg.includes("RESOURCE_EXHAUSTED") || 
-                             errMsg.toLowerCase().includes("quota") || 
-                             errMsg.toLowerCase().includes("rate limit") ||
-                             errMsg.toLowerCase().includes("limit exceeded");
-
-        if (isQuotaError || i === attempts - 1) {
-          throw err;
-        }
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-        delayMs *= 2;
-      }
-    }
-
-    if (!responseText) {
-      throw new Error("No analysis returned from Gemini.");
-    }
+    const responseText = await generateSoilAnalysisWithGemini(
+      ai,
+      { parts: [imagePart, promptPart] },
+      systemInstruction
+    );
 
     let cleanedResponseText = responseText;
     if (cleanedResponseText.startsWith("```")) {
@@ -893,13 +917,15 @@ app.post("/api/analyze-lab-report", async (req, res) => {
 
     // If manual values are provided, add them to the context
     if (manualValues) {
-      const { ph, nitrogen, phosphorus, potassium, organicMatter } = manualValues;
-      textPrompt += `We have manually provided these measured soil values:
+      const { ph, nitrogen, phosphorus, potassium, organicMatter, ec, zinc, iron, boron, sulfur, calcium, magnesium } = manualValues;
+      textPrompt += `We have manually provided these measured soil lab test values:
       - pH level: ${ph || "Not specified"}
-      - Nitrogen status/level: ${nitrogen || "Not specified"}
-      - Phosphorus status/level: ${phosphorus || "Not specified"}
-      - Potassium status/level: ${potassium || "Not specified"}
-      - Organic Matter percentage: ${organicMatter || "Not specified"}. 
+      - Nitrogen (N) status/level: ${nitrogen || "Not specified"}
+      - Phosphorus (P) status/level: ${phosphorus || "Not specified"}
+      - Potassium (K) status/level: ${potassium || "Not specified"}
+      - Organic Carbon / Matter percentage: ${organicMatter || "Not specified"}
+      - Electrical Conductivity (EC / Salinity): ${ec || "Not specified"}
+      - Micronutrients: Zinc (${zinc || "Not specified"}), Iron (${iron || "Not specified"}), Boron (${boron || "Not specified"}), Sulfur (${sulfur || "Not specified"}), Calcium (${calcium || "Not specified"}), Magnesium (${magnesium || "Not specified"}).
       `;
     }
 
@@ -926,48 +952,13 @@ app.post("/api/analyze-lab-report", async (req, res) => {
 
     contents.push({ text: textPrompt });
 
-    let responseText = "";
-    let attempts = 3;
-    let delayMs = 1000;
+    const systemInstruction = "You are an expert agronomist, soil chemist, and crop advisor. Translate soil lab metrics into plain, encouraging, and highly actionable agricultural advice. CRITICAL REQUIREMENT: Explain all scientific findings, nutrient roles, and gardening steps in extremely simple, non-technical, layperson terms (avoiding complex technical jargon completely, or explaining them simply with analogies) so that an average farmer or garden enthusiast can easily understand and act upon them.";
 
-    for (let i = 0; i < attempts; i++) {
-      try {
-        const response = await ai.models.generateContent({
-          model: "gemini-3.5-flash",
-          contents,
-          config: {
-            systemInstruction: "You are an expert agronomist, soil chemist, and crop advisor. Translate soil lab metrics into plain, encouraging, and highly actionable agricultural advice. CRITICAL REQUIREMENT: Explain all scientific findings, nutrient roles, and gardening steps in extremely simple, non-technical, layperson terms (avoiding complex technical jargon completely, or explaining them simply with analogies) so that an average farmer or garden enthusiast can easily understand and act upon them.",
-            responseMimeType: "application/json",
-            responseSchema: soilResponseSchema
-          }
-        });
-
-        if (response.text) {
-          responseText = response.text.trim();
-          break;
-        }
-      } catch (err: any) {
-        const errMsg = String(err.message || err);
-        console.warn(`Gemini API lab report attempt ${i + 1} failed:`, errMsg);
-
-        // Fail fast on daily rate limits, resource exhaustion, and other 429 errors
-        const isQuotaError = errMsg.includes("429") || 
-                             errMsg.includes("RESOURCE_EXHAUSTED") || 
-                             errMsg.toLowerCase().includes("quota") || 
-                             errMsg.toLowerCase().includes("rate limit") ||
-                             errMsg.toLowerCase().includes("limit exceeded");
-
-        if (isQuotaError || i === attempts - 1) {
-          throw err;
-        }
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-        delayMs *= 2;
-      }
-    }
-
-    if (!responseText) {
-      throw new Error("No analysis returned from Gemini.");
-    }
+    const responseText = await generateSoilAnalysisWithGemini(
+      ai,
+      contents,
+      systemInstruction
+    );
 
     let cleanedResponseText = responseText;
     if (cleanedResponseText.startsWith("```")) {

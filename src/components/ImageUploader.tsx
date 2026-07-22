@@ -54,7 +54,7 @@ export default function ImageUploader({ onImageSelected, isLoading }: ImageUploa
     } catch (err: any) {
       console.error("Camera access error:", err);
       setCameraError(
-        "Could not access your camera. Please ensure permissions are granted and you are on an HTTPS connection or localhost."
+        "Could not access camera. Please verify camera permissions in your browser."
       );
       setUseCamera(false);
     }
@@ -64,13 +64,11 @@ export default function ImageUploader({ onImageSelected, isLoading }: ImageUploa
     if (videoRef.current) {
       const video = videoRef.current;
       const canvas = document.createElement("canvas");
-      // Match canvas dimensions to the video stream resolution
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
 
       const ctx = canvas.getContext("2d");
       if (ctx) {
-        // Draw the current video frame on the canvas
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
         setPreviewUrl(dataUrl);
@@ -83,7 +81,7 @@ export default function ImageUploader({ onImageSelected, isLoading }: ImageUploa
 
   const processFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file (PNG, JPG, WEBP).");
+      alert("Please upload a valid image file (PNG, JPG, WEBP).");
       return;
     }
 
@@ -136,35 +134,37 @@ export default function ImageUploader({ onImageSelected, isLoading }: ImageUploa
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-stone-200/60 p-6 shadow-sm flex flex-col items-stretch">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-stone-900 flex items-center gap-2">
-          <Upload className="w-4 h-4 text-emerald-600" />
-          Upload or Capture Soil Photo
+    <div className="bg-[#e6f3eb] rounded-2xl border border-[#b0d6be] p-6 shadow-sm flex flex-col items-stretch space-y-4 text-[#082212]">
+      
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold text-[#082212] flex items-center gap-2 font-heading">
+          <Upload className="w-4 h-4 text-emerald-700" />
+          Upload or Snapshot Soil Sample
         </h3>
         {previewUrl && (
           <button
             onClick={resetUploader}
-            className="text-xs font-semibold text-stone-500 hover:text-stone-800 flex items-center gap-1 transition-colors"
+            className="text-xs font-semibold text-[#082212] hover:bg-[#cbe2cd] flex items-center gap-1 transition-colors bg-[#d8ebd9] px-2.5 py-1 rounded-lg border border-[#a2d3b2] cursor-pointer"
             id="clear-photo-btn"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="w-3.5 h-3.5 text-emerald-800" />
             Clear
           </button>
         )}
       </div>
 
       {cameraError && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+        <div className="p-3 bg-rose-100 border border-rose-300 rounded-xl text-xs text-rose-900 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-700" />
           <span>{cameraError}</span>
         </div>
       )}
 
-      {/* Main Upload / Camera View Area */}
-      <div className="relative min-h-[280px] flex flex-col items-center justify-center rounded-xl overflow-hidden bg-stone-50/70 border-2 border-dashed border-stone-200 hover:border-emerald-500/50 transition-colors">
+      {/* Main Upload / Camera Area */}
+      <div className="relative min-h-[290px] flex flex-col items-center justify-center rounded-2xl overflow-hidden bg-[#d8ebd9] border-2 border-dashed border-[#a2d3b2] hover:border-emerald-600 transition-all duration-200 shadow-inner">
         {useCamera ? (
-          // Camera view mode
+          // Camera Mode
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
             <video
               ref={videoRef}
@@ -175,18 +175,18 @@ export default function ImageUploader({ onImageSelected, isLoading }: ImageUploa
             <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-3 px-4">
               <button
                 onClick={handleCapture}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg flex items-center gap-1.5 transition-all"
+                className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
                 id="capture-shutter-btn"
               >
                 <Camera className="w-4 h-4" />
-                Capture Soil Snapshot
+                Capture Soil Frame
               </button>
               <button
                 onClick={() => {
                   stopCamera();
                   setUseCamera(false);
                 }}
-                className="px-4 py-2.5 bg-stone-800/80 hover:bg-stone-900/90 text-white rounded-xl text-xs font-medium backdrop-blur-sm transition-all"
+                className="px-4 py-2.5 bg-stone-900/80 hover:bg-stone-900 text-white rounded-xl text-xs font-semibold backdrop-blur-sm transition-all cursor-pointer"
                 id="cancel-camera-btn"
               >
                 Cancel
@@ -194,35 +194,35 @@ export default function ImageUploader({ onImageSelected, isLoading }: ImageUploa
             </div>
           </div>
         ) : previewUrl ? (
-          // Preview of selected / captured image
-          <div className="absolute inset-0 bg-stone-100 flex items-center justify-center">
+          // Preview State
+          <div className="absolute inset-0 bg-[#0a2013] flex items-center justify-center group">
             <img
               src={previewUrl}
               alt="Soil sample preview"
               className="w-full h-full object-cover"
             />
             {isLoading && (
-              <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm flex flex-col items-center justify-center text-white">
-                <div className="w-10 h-10 border-4 border-white/30 border-t-emerald-400 rounded-full animate-spin mb-3" />
-                <p className="text-xs font-semibold tracking-wider uppercase animate-pulse flex items-center gap-1">
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                  Gemini Analyzing Soil...
+              <div className="absolute inset-0 bg-[#0a2013]/90 backdrop-blur-md flex flex-col items-center justify-center text-white px-6 text-center animate-in fade-in duration-200">
+                <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin mb-4" />
+                <p className="text-xs font-bold tracking-widest uppercase flex items-center gap-1.5 text-emerald-300">
+                  <Sparkles className="w-4 h-4 text-amber-300 animate-spin" />
+                  AI Diagnostic In Progress
                 </p>
-                <p className="text-[10px] text-stone-200 mt-1 max-w-[200px] text-center">
-                  Decoding density, texture, moisture, and minerals
+                <p className="text-[11px] text-emerald-100/90 mt-1.5 max-w-xs font-sans leading-relaxed">
+                  Analyzing soil color profiles, aggregate size, moisture texture & predicting mineral balances...
                 </p>
               </div>
             )}
           </div>
         ) : (
-          // Standard Drag-and-Drop Area
+          // Drag & Drop Default Area
           <div
             onDragEnter={handleDrag}
             onDragOver={handleDrag}
             onDragLeave={handleDrag}
             onDrop={handleDrop}
             className={`absolute inset-0 flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-colors ${
-              isDragActive ? "bg-emerald-50/20 border-emerald-500" : ""
+              isDragActive ? "bg-[#cbe2cd] border-emerald-600" : ""
             }`}
             onClick={triggerFileSelect}
             id="drag-drop-zone"
@@ -235,25 +235,25 @@ export default function ImageUploader({ onImageSelected, isLoading }: ImageUploa
               className="hidden"
             />
 
-            <div className="p-4 bg-emerald-50 text-emerald-700 rounded-full mb-3 border border-emerald-100/50 shadow-inner group-hover:scale-105 transition-transform">
-              <ImageIcon className="w-8 h-8" />
+            <div className="p-4 bg-[#c3e2cd] text-emerald-900 rounded-2xl mb-3 border border-[#9ed0b0] shadow-2xs group-hover:scale-105 transition-transform">
+              <ImageIcon className="w-8 h-8 text-emerald-800" />
             </div>
 
-            <p className="text-sm font-semibold text-stone-800">
+            <p className="text-sm font-bold text-[#082212] font-heading">
               Drag & drop soil photo here
             </p>
-            <p className="text-xs text-stone-400 mt-1">
-              Supports JPEG, PNG, WEBP up to 10MB
+            <p className="text-xs text-[#18482a] mt-1 font-medium">
+              Supports JPG, PNG, WEBP up to 10MB
             </p>
 
-            <div className="flex items-center gap-2 mt-5">
+            <div className="flex items-center gap-2.5 mt-5">
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   triggerFileSelect();
                 }}
-                className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow"
+                className="px-4 py-2 bg-[#0a2e1a] hover:bg-[#123e25] text-white rounded-xl text-xs font-bold transition-all shadow-md border border-[#164d2d] cursor-pointer"
                 id="browse-btn"
               >
                 Browse Files
@@ -264,7 +264,7 @@ export default function ImageUploader({ onImageSelected, isLoading }: ImageUploa
                   e.stopPropagation();
                   startCamera();
                 }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow flex items-center gap-1.5"
+                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                 id="camera-mode-btn"
               >
                 <Camera className="w-3.5 h-3.5" />
@@ -275,10 +275,7 @@ export default function ImageUploader({ onImageSelected, isLoading }: ImageUploa
         )}
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-[11px] text-stone-400 font-mono">
-        <span>IMAGE SCANNER</span>
-        <span>RESOLUTION: AUTO</span>
-      </div>
     </div>
   );
 }
+
